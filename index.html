@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f6b5c">
+  <title>CampusPurse</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="app-header">
+    <h1>CampusPurse</h1>
+    <p class="tagline">Know what you can spend.</p>
+  </header>
+
+  <div class="container">
+    <p id="warning" class="alert alert-bad" role="alert" hidden></p>
+    <p id="notice" class="alert alert-ok" hidden></p>
+    <p id="announcer" class="visually-hidden" role="status" aria-live="polite"></p>
+
+    <main id="main" tabindex="-1">
+
+      <!-- ============ SETUP ============ -->
+      <section id="view-setup" class="view" aria-labelledby="setup-title" hidden>
+        <h2 id="setup-title" tabindex="-1">Set up your plan</h2>
+        <p id="setup-intro" class="muted">
+          Enter what you have and what you must pay for. Whatever is left is your flexible money.
+        </p>
+
+        <form id="plan-form" novalidate>
+          <div class="field">
+            <label for="in-balance">Money you have now (&#8358;)</label>
+            <input id="in-balance" type="text" inputmode="decimal" autocomplete="off"
+                   placeholder="e.g. 30000" data-field="startingBalance" aria-describedby="e-startingBalance">
+            <p class="field-error" id="e-startingBalance" data-error-for="startingBalance"></p>
+          </div>
+
+          <div class="field">
+            <label for="in-income-date">Next income date</label>
+            <input id="in-income-date" type="date" data-field="nextIncomeDate" aria-describedby="e-nextIncomeDate">
+            <p class="field-error" id="e-nextIncomeDate" data-error-for="nextIncomeDate"></p>
+          </div>
+
+          <fieldset class="field-group">
+            <legend>Planned expenses until then (&#8358;)</legend>
+            <p class="hint">Leave a box empty if you don't expect that expense.</p>
+
+            <div class="field">
+              <label for="in-food"><span aria-hidden="true">&#127858;</span> Food</label>
+              <input id="in-food" type="text" inputmode="decimal" autocomplete="off" placeholder="0"
+                     data-field="planned.food" aria-describedby="e-planned-food">
+              <p class="field-error" id="e-planned-food" data-error-for="planned.food"></p>
+            </div>
+            <div class="field">
+              <label for="in-transport"><span aria-hidden="true">&#128652;</span> Transport</label>
+              <input id="in-transport" type="text" inputmode="decimal" autocomplete="off" placeholder="0"
+                     data-field="planned.transport" aria-describedby="e-planned-transport">
+              <p class="field-error" id="e-planned-transport" data-error-for="planned.transport"></p>
+            </div>
+            <div class="field">
+              <label for="in-data"><span aria-hidden="true">&#128241;</span> Data</label>
+              <input id="in-data" type="text" inputmode="decimal" autocomplete="off" placeholder="0"
+                     data-field="planned.data" aria-describedby="e-planned-data">
+              <p class="field-error" id="e-planned-data" data-error-for="planned.data"></p>
+            </div>
+            <div class="field">
+              <label for="in-school"><span aria-hidden="true">&#127891;</span> School</label>
+              <input id="in-school" type="text" inputmode="decimal" autocomplete="off" placeholder="0"
+                     data-field="planned.school" aria-describedby="e-planned-school">
+              <p class="field-error" id="e-planned-school" data-error-for="planned.school"></p>
+            </div>
+          </fieldset>
+
+          <div id="setup-summary" class="summary" aria-live="polite"></div>
+
+          <p class="form-error" role="alert"></p>
+          <p id="setup-archive-note" class="hint" hidden>
+            Saving a new plan archives your current plan, including all its spending history.
+          </p>
+
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Save plan</button>
+            <button type="button" id="btn-setup-cancel" class="btn btn-secondary" hidden>Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ============ DASHBOARD ============ -->
+      <section id="view-dashboard" class="view" aria-labelledby="dash-title" hidden>
+        <h2 id="dash-title" class="visually-hidden">Dashboard</h2>
+
+        <p id="banner" class="alert" role="status" hidden></p>
+
+        <div class="hero">
+          <div class="card hero-card">
+            <p class="card-label">Flexible money left</p>
+            <p id="flex-amount" class="big-number">&#8358;0</p>
+            <p id="flex-sub" class="card-sub"></p>
+          </div>
+          <div class="card hero-card">
+            <p class="card-label">Safe to spend per day</p>
+            <p id="safe-amount" class="big-number">&#8358;0</p>
+            <p id="safe-sub" class="card-sub"></p>
+          </div>
+        </div>
+
+        <div class="card info-card">
+          <dl class="info-list">
+            <div>
+              <dt>Next income</dt>
+              <dd id="income-date">-</dd>
+            </div>
+            <div>
+              <dt>Time left</dt>
+              <dd id="days-left">-</dd>
+            </div>
+            <div>
+              <dt>Total money left</dt>
+              <dd id="money-left">-</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="actions actions-main">
+          <button type="button" id="btn-log" class="btn btn-primary">Log Spending</button>
+          <button type="button" id="btn-afford" class="btn btn-secondary">Can I Afford This?</button>
+        </div>
+
+        <section class="card" aria-labelledby="bars-title">
+          <h3 id="bars-title">Where your money stands</h3>
+          <ul id="bars" class="bars"></ul>
+          <p id="other-note" class="other-note"></p>
+        </section>
+
+        <section class="card" aria-labelledby="recent-title">
+          <h3 id="recent-title">Recent spending</h3>
+          <ul id="recent" class="recent"></ul>
+        </section>
+
+        <div class="footer-actions">
+          <button type="button" id="btn-new-plan" class="btn btn-link">Start a new plan</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============ LOG SPENDING DIALOG ============ -->
+  <dialog id="log-dialog" aria-labelledby="log-title">
+    <form id="log-form" novalidate>
+      <h2 id="log-title">Log spending</h2>
+
+      <div class="field">
+        <label for="log-amount">Amount (&#8358;)</label>
+        <input id="log-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 2000"
+               data-field="amount" aria-describedby="e-log-amount">
+        <p class="field-error" id="e-log-amount" data-error-for="amount"></p>
+      </div>
+
+      <div class="field">
+        <label for="log-category">Category</label>
+        <select id="log-category" data-field="category" aria-describedby="log-hint e-log-category">
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="data">Data</option>
+          <option value="school">School</option>
+          <option value="other">Other (unplanned)</option>
+        </select>
+        <p class="hint" id="log-hint"></p>
+        <p class="field-error" id="e-log-category" data-error-for="category"></p>
+      </div>
+
+      <div class="field">
+        <label for="log-desc">Description (optional)</label>
+        <input id="log-desc" type="text" maxlength="100" autocomplete="off" placeholder="e.g. Lunch">
+      </div>
+
+      <div class="field">
+        <label for="log-date">Date</label>
+        <input id="log-date" type="date" data-field="date" aria-describedby="e-log-date">
+        <p class="field-error" id="e-log-date" data-error-for="date"></p>
+      </div>
+
+      <p class="form-error" role="alert"></p>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">Add spending</button>
+        <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ============ CAN I AFFORD THIS DIALOG ============ -->
+  <dialog id="afford-dialog" aria-labelledby="afford-title">
+    <form id="afford-form" novalidate>
+      <h2 id="afford-title">Can I afford this?</h2>
+
+      <div class="field">
+        <label for="afford-amount">What do you want to spend? (&#8358;)</label>
+        <input id="afford-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 3000"
+               data-field="amount" aria-describedby="e-afford-amount">
+        <p class="field-error" id="e-afford-amount" data-error-for="amount"></p>
+      </div>
+
+      <div class="field">
+        <label for="afford-category">Category</label>
+        <select id="afford-category" data-field="category" aria-describedby="e-afford-category">
+          <option value="other" selected>Other (unplanned)</option>
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="data">Data</option>
+          <option value="school">School</option>
+        </select>
+        <p class="field-error" id="e-afford-category" data-error-for="category"></p>
+      </div>
+
+      <p class="form-error" role="alert"></p>
+
+      <div id="afford-result" class="result" aria-live="polite" tabindex="-1"></div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">Check</button>
+        <button type="button" class="btn btn-secondary" data-close>Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="calc.js"></script>
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
