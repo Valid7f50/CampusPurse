@@ -307,6 +307,55 @@ function addSpending(plan, spendings, entry, today) {
 }
 
 /**
+ * Replaces the entry at `index` with a corrected one (same position, no
+ * duplicate). The whole log is replayed afterwards by computeState, so no
+ * balance is ever adjusted by hand. Allowed on an ended plan as long as
+ * the plan is still the active one.
+ */
+function editSpending(plan, spendings, index, entry, today) {
+  const current = computeState(plan, spendings, today);
+  if (!current.ok) return current;
+  if (!Array.isArray(spendings) || !Number.isInteger(index) || index < 0 || index >= spendings.length) {
+    return fail([err('INVALID_ENTRY', 'That spending entry could not be found.', 'entry')]);
+  }
+  const errors = validateSpending(entry);
+  if (errors.length) return fail(errors);
+
+  const previous = spendings[index];
+  const amount = round2(entry.amount);
+  // Cash must never go negative: money left, ignoring the entry being replaced.
+  const available = round2(current.state.moneyRemaining + previous.amount);
+  if (amount > available) {
+    return fail([
+      err('INSUFFICIENT_FUNDS', `You only have ${fmt(available)} available for this entry.`, 'amount'),
+    ]);
+  }
+  const normalized = {
+    amount,
+    category: entry.category,
+    description: typeof entry.description === 'string' ? entry.description.trim().slice(0, 100) : '',
+    date: entry.date || previous.date,
+  };
+  const next = spendings.map((s, i) => (i === index ? normalized : s));
+  const check = computeState(plan, next, today);
+  if (!check.ok) return check;
+  return { ok: true, spendings: next, entry: normalized, previous };
+}
+
+/** Removes the entry at `index`. Returns a NEW array; balances come from replay. */
+function deleteSpending(plan, spendings, index, today) {
+  const current = computeState(plan, spendings, today);
+  if (!current.ok) return current;
+  if (!Array.isArray(spendings) || !Number.isInteger(index) || index < 0 || index >= spendings.length) {
+    return fail([err('INVALID_ENTRY', 'That spending entry could not be found.', 'entry')]);
+  }
+  const next = spendings.filter((_, i) => i !== index);
+  const check = computeState(plan, next, today);
+  if (!check.ok) return check;
+  return { ok: true, spendings: next, removed: spendings[index] };
+}
+
+/**
  * "Can I afford this?" Simulates the purchase without saving anything.
  * verdict: 'fits' | 'tight' | 'over_plan' | 'insufficient_funds' | 'plan_ended'
  */
@@ -398,6 +447,8 @@ const api = {
   createPlan,
   computeState,
   addSpending,
+  editSpending,
+  deleteSpending,
   canAfford,
   validatePlan,
   validateSpending,

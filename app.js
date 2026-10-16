@@ -40,6 +40,9 @@
 
   let active = null; // { id, plan, spendings } or null
   let state = null; // latest result of calc.computeState
+  let editing = null; // { index, entry } while the spending form is in edit mode
+  let pendingDelete = null; // { index, entry } while the delete prompt is open
+  let showAllRecent = false;
   let noticeTimer = null;
 
   /* ---------- small helpers ---------- */
@@ -247,6 +250,7 @@
     }
     showWarning('');
     active = result.active;
+    showAllRecent = false;
     renderDashboard();
     showView('dashboard');
     notify('Your new plan is ready.');
@@ -362,15 +366,23 @@
       'It comes straight out of flexible money and has no budget of its own.';
   }
 
+  const RECENT_LIMIT = 10;
+
   function renderRecent() {
     const list = $('#recent');
+    const toggle = $('#btn-recent-toggle');
     list.replaceChildren();
-    const entries = active.spendings.slice().reverse().slice(0, 10);
-    if (entries.length === 0) {
+    const total = active.spendings.length;
+    if (total === 0) {
       list.append(el('li', null, el('span', { class: 'empty' }, 'No spending logged yet.')));
+      toggle.hidden = true;
       return;
     }
-    for (const e of entries) {
+    const lowest = showAllRecent ? 0 : Math.max(0, total - RECENT_LIMIT);
+    // Newest first. `i` is the entry's real position in the log, used by Edit and Delete.
+    for (let i = total - 1; i >= lowest; i--) {
+      const e = active.spendings[i];
+      const name = e.description || LABELS[e.category];
       list.append(
         el(
           'li',
@@ -378,14 +390,42 @@
           el(
             'span',
             null,
-            el('span', { class: 'what' }, e.description || LABELS[e.category]),
+            el('span', { class: 'what' }, name),
             el('br'),
             el('span', { class: 'meta' }, `${LABELS[e.category]} \u00B7 ${formatDate(e.date, false)}`)
           ),
-          el('span', { class: 'amt' }, money(e.amount))
+          el('span', { class: 'amt' }, money(e.amount)),
+          el(
+            'div',
+            { class: 'entry-actions' },
+            el(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn-secondary btn-small',
+                'data-action': 'edit',
+                'data-index': String(i),
+                'aria-label': `Edit ${name}, ${money(e.amount)}`,
+              },
+              'Edit'
+            ),
+            el(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn-danger-outline btn-small',
+                'data-action': 'delete',
+                'data-index': String(i),
+                'aria-label': `Delete ${name}, ${money(e.amount)}`,
+              },
+              'Delete'
+            )
+          )
         )
       );
     }
+    toggle.hidden = total <= RECENT_LIMIT;
+    toggle.textContent = showAllRecent ? 'Show fewer' : `Show all ${total} entries`;
   }
 
   function bannerFor(s) {
@@ -448,7 +488,11 @@
         : s.daysRemaining === 0
         ? 'Income day is today'
         : 'Income date has passed';
-    $('#money-left').textContent = money(s.moneyRemaining);
+    $('#total-amount').textContent = money(s.moneyRemaining);
+    $('#total-sub').textContent =
+      s.flexible.remaining < 0
+        ? `${money(s.reservedRemaining)} set aside for essentials, minus ${money(s.flexible.overspentBy)} overspent`
+        : `${money(s.reservedRemaining)} set aside for essentials + ${money(s.flexible.remaining)} flexible`;
 
     // Banner
     const banner = $('#banner');
@@ -465,30 +509,97 @@
     renderRecent();
   }
 
-  /* ---------- log spending ---------- */
+  /* ---------- log, edit and delete spending ---------- */
 
   const logDialog = $('#log-dialog');
   const logForm = $('#log-form');
   const logCategory = $('#log-category');
+  const deleteDialog = $('#delete-dialog');
+  const deleteForm = $('#delete-form');
+
+  const copy = (value) => JSON.parse(JSON.stringify(value));
 
   function updateLogHint() {
     const cat = logCategory.value;
-    $('#log-hint').textContent =
-      cat === 'other'
-        ? 'Other has no budget. It comes straight out of flexible money.'
-        : `${LABELS[cat]} has ${money(state.categories[cat].remaining)} left. Anything above that comes out of flexible money.`;
+    let text;
+    if (cat === 'other') {
+      text = 'Other has no budget. It comes straight out of flexible money.';
+    } else if (editing) {
+      text = `${LABELS[cat]} has a budget of ${money(state.categories[cat].planned)}. Spending above it comes out of flexible money.`;
+    } else {
+      text = `${LABELS[cat]} has ${money(state.categories[cat].remaining)} left. Anything above that comes out of flexible money.`;
+    }
+    $('#log-hint').textContent = text;
+  }
+
+  /** index === null opens the form to add; a number opens it to edit that entry. */
+  function openLogDialog(index) {
+    if (!state) return;
+    logForm.reset();
+    clearErrors(logForm);
+    const date = $('#log-date');
+    date.max = todayISO();
+    if (index === null) {
+      editing = null;
+      $('#log-title').textContent = 'Log spending';
+      $('#log-submit').textContent = 'Add spending';
+      date.value = todayISO();
+    } else {
+      const entry = active.spendings[index];
+      if (!entry) return;
+      editing = { index, entry: copy(entry) };
+      $('#log-title').textContent = 'Edit spending';
+      $('#log-submit').textContent = 'Save changes';
+      $('#log-amount').value = String(entry.amount);
+      logCategory.value = entry.category;
+      $('#log-desc').value = entry.description;
+      date.value = entry.date;
+    }
+    updateLogHint();
+    openDialog(logDialog);
+    $('#log-amount').focus();
+  }
+
+  /**
+   * Edit and delete work by position in the log, so first make sure the saved
+   * entry is still the one on screen (it may have changed in another tab).
+   */
+  function entryIsCurrent(index, expected) {
+    const loaded = store.loadActive();
+    if (!loaded.ok) return { ok: false, errors: loaded.errors };
+    const same =
+      loaded.active &&
+      loaded.active.id === active.id &&
+      JSON.stringify(loaded.active.spendings[index]) === JSON.stringify(expected);
+    if (same) return { ok: true };
+    active = loaded.active;
+    return { ok: false, stale: true };
+  }
+
+  function handleStale() {
+    closeDialog(logDialog);
+    closeDialog(deleteDialog);
+    editing = null;
+    pendingDelete = null;
+    showWarning('Your spending log changed in another tab, so CampusPurse reloaded it. Please try again.');
+    if (active) {
+      renderDashboard();
+      if (state) showView('dashboard');
+    } else {
+      showSetup({ canCancel: false });
+    }
+  }
+
+  function afterCorrection(message) {
+    showWarning('');
+    renderDashboard();
+    notify(message);
+    $('#recent-title').focus(); // the button that opened the dialog may no longer exist
   }
 
   $('#btn-log').addEventListener('click', () => {
     if (!state || state.planEnded) return;
-    logForm.reset();
-    clearErrors(logForm);
-    const date = $('#log-date');
-    date.value = todayISO();
-    date.max = todayISO();
-    updateLogHint();
-    openDialog(logDialog);
-    $('#log-amount').focus();
+    openLogDialog(null);
   });
 
   logCategory.addEventListener('change', updateLogHint);
@@ -501,20 +612,90 @@
       description: $('#log-desc').value,
       date: $('#log-date').value || undefined,
     };
-    const added = calc.addSpending(active.plan, active.spendings, entry);
-    if (!added.ok) {
-      showErrors(logForm, added.errors);
+
+    let result;
+    if (editing) {
+      const fresh = entryIsCurrent(editing.index, editing.entry);
+      if (!fresh.ok) {
+        if (fresh.stale) handleStale();
+        else showErrors(logForm, fresh.errors);
+        return;
+      }
+      result = calc.editSpending(active.plan, active.spendings, editing.index, entry);
+    } else {
+      result = calc.addSpending(active.plan, active.spendings, entry);
+    }
+    if (!result.ok) {
+      showErrors(logForm, result.errors);
       return;
     }
-    const saved = store.saveSpendings(added.spendings);
+
+    // Only replace the in-memory log once it has been saved.
+    const saved = store.saveSpendings(result.spendings);
     if (!saved.ok) {
       showErrors(logForm, saved.errors);
       return;
     }
     active = saved.active;
     closeDialog(logDialog);
-    renderDashboard();
-    notify(`Logged ${money(added.entry.amount)} on ${LABELS[added.entry.category]}.`);
+    const what = `${money(result.entry.amount)} on ${LABELS[result.entry.category]}`;
+    if (editing) {
+      editing = null;
+      afterCorrection(`Updated entry: ${what}.`);
+    } else {
+      renderDashboard();
+      notify(`Logged ${what}.`);
+    }
+  });
+
+  function openDeleteDialog(index) {
+    const entry = active.spendings[index];
+    if (!entry) return;
+    pendingDelete = { index, entry: copy(entry) };
+    clearErrors(deleteForm);
+    $('#delete-summary').textContent =
+      `${entry.description || LABELS[entry.category]}: ${money(entry.amount)} on ${LABELS[entry.category]}, ` +
+      `${formatDate(entry.date, false)}.`;
+    openDialog(deleteDialog);
+    $('#delete-cancel').focus(); // safest default for a destructive action
+  }
+
+  deleteForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!pendingDelete) return;
+    const fresh = entryIsCurrent(pendingDelete.index, pendingDelete.entry);
+    if (!fresh.ok) {
+      if (fresh.stale) handleStale();
+      else showErrors(deleteForm, fresh.errors);
+      return;
+    }
+    const result = calc.deleteSpending(active.plan, active.spendings, pendingDelete.index);
+    if (!result.ok) {
+      showErrors(deleteForm, result.errors);
+      return;
+    }
+    const saved = store.saveSpendings(result.spendings);
+    if (!saved.ok) {
+      showErrors(deleteForm, saved.errors);
+      return;
+    }
+    active = saved.active;
+    pendingDelete = null;
+    closeDialog(deleteDialog);
+    afterCorrection(`Deleted ${money(result.removed.amount)} on ${LABELS[result.removed.category]}.`);
+  });
+
+  $('#recent').addEventListener('click', (event) => {
+    const btn = event.target.closest('button[data-action]');
+    if (!btn || !active) return;
+    const index = Number(btn.dataset.index);
+    if (btn.dataset.action === 'edit') openLogDialog(index);
+    else if (btn.dataset.action === 'delete') openDeleteDialog(index);
+  });
+
+  $('#btn-recent-toggle').addEventListener('click', () => {
+    showAllRecent = !showAllRecent;
+    renderRecent();
   });
 
   /* ---------- can I afford this ---------- */

@@ -94,6 +94,13 @@
 
         <p id="banner" class="alert" role="status" hidden></p>
 
+        <div class="card total-card">
+          <p class="card-label">Total money left</p>
+          <p id="total-amount" class="total-number">&#8358;0</p>
+          <p id="total-sub" class="total-sub"></p>
+          <p class="total-note">All the cash you have left, including money set aside for essentials.</p>
+        </div>
+
         <div class="hero">
           <div class="card hero-card">
             <p class="card-label">Flexible money left</p>
@@ -117,10 +124,6 @@
               <dt>Time left</dt>
               <dd id="days-left">-</dd>
             </div>
-            <div>
-              <dt>Total money left</dt>
-              <dd id="money-left">-</dd>
-            </div>
           </dl>
         </div>
 
@@ -136,8 +139,9 @@
         </section>
 
         <section class="card" aria-labelledby="recent-title">
-          <h3 id="recent-title">Recent spending</h3>
+          <h3 id="recent-title" tabindex="-1">Recent spending</h3>
           <ul id="recent" class="recent"></ul>
+          <button type="button" id="btn-recent-toggle" class="btn btn-link" hidden></button>
         </section>
 
         <div class="footer-actions">
@@ -186,7 +190,7 @@
       <p class="form-error" role="alert"></p>
 
       <div class="actions">
-        <button type="submit" class="btn btn-primary">Add spending</button>
+        <button type="submit" id="log-submit" class="btn btn-primary">Add spending</button>
         <button type="button" class="btn btn-secondary" data-close>Cancel</button>
       </div>
     </form>
@@ -223,6 +227,20 @@
       <div class="actions">
         <button type="submit" class="btn btn-primary">Check</button>
         <button type="button" class="btn btn-secondary" data-close>Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ============ DELETE CONFIRMATION DIALOG ============ -->
+  <dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-summary">
+    <form id="delete-form" novalidate>
+      <h2 id="delete-title">Delete this spending?</h2>
+      <p id="delete-summary" class="delete-summary"></p>
+      <p class="hint">Your balances will be recalculated without it. This cannot be undone.</p>
+      <p class="form-error" role="alert"></p>
+      <div class="actions">
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <button type="button" id="delete-cancel" class="btn btn-secondary" data-close>Cancel</button>
       </div>
     </form>
   </dialog>
