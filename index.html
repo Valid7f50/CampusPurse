@@ -95,7 +95,12 @@
         <p id="banner" class="alert" role="status" hidden></p>
 
         <div class="card total-card">
-          <p class="card-label">Total money left</p>
+          <div class="label-row">
+            <p class="card-label"><span aria-hidden="true">💰</span> Total money left</p>
+            <button type="button" class="info-btn" aria-expanded="false" aria-controls="tip-total"
+                    aria-label="What does Total money left mean?"><span aria-hidden="true">i</span></button>
+          </div>
+          <p id="tip-total" class="info-tip" hidden>This is all the money you still have in your plan. It includes money reserved for essential expenses and your flexible money.</p>
           <p id="total-amount" class="total-number">&#8358;0</p>
           <p id="total-sub" class="total-sub"></p>
           <p class="total-note">All the cash you have left, including money set aside for essentials.</p>
@@ -103,12 +108,22 @@
 
         <div class="hero">
           <div class="card hero-card">
+            <div class="label-row">
             <p class="card-label">Flexible money left</p>
+            <button type="button" class="info-btn" aria-expanded="false" aria-controls="tip-flex"
+                    aria-label="What does Flexible money left mean?"><span aria-hidden="true">i</span></button>
+          </div>
+          <p id="tip-flex" class="info-tip" hidden>This is the money available for things outside your planned essential expenses. Spending from this amount reduces what you can safely spend each day.</p>
             <p id="flex-amount" class="big-number">&#8358;0</p>
             <p id="flex-sub" class="card-sub"></p>
           </div>
           <div class="card hero-card">
-            <p class="card-label">Safe to spend per day</p>
+            <div class="label-row">
+            <p class="card-label"><span aria-hidden="true">💸</span> Flexible spending per day</p>
+            <button type="button" class="info-btn" aria-expanded="false" aria-controls="tip-daily"
+                    aria-label="What does Flexible spending per day mean?"><span aria-hidden="true">i</span></button>
+          </div>
+          <p id="tip-daily" class="info-tip" hidden>This is the amount you can safely spend each day from your flexible money without using money you've set aside for food, transport, data, or school.</p>
             <p id="safe-amount" class="big-number">&#8358;0</p>
             <p id="safe-sub" class="card-sub"></p>
           </div>

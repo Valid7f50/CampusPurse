@@ -731,7 +731,7 @@
         list.append(row('Paid from', 'Flexible money'));
       }
       list.append(row('Flexible money after', money(r.flexibleAfter)));
-      list.append(row('Safe per day after', money(r.safeDailyAfter)));
+      list.append(row('Flexible spending per day after', money(r.safeDailyAfter)));
       list.append(row('Total money after', money(r.moneyAfter)));
       box.append(list);
     }
@@ -780,6 +780,41 @@
     dlg.addEventListener('click', (event) => {
       if (event.target === dlg) closeDialog(dlg);
     });
+  });
+
+  /* ---------- info (?) buttons ---------- */
+
+  const infoButtons = Array.from(document.querySelectorAll('.info-btn'));
+
+  function setTip(btn, open) {
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.getElementById(btn.getAttribute('aria-controls')).hidden = !open;
+  }
+
+  function closeAllTips(except) {
+    for (const b of infoButtons) if (b !== except) setTip(b, false);
+  }
+
+  infoButtons.forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const willOpen = btn.getAttribute('aria-expanded') !== 'true';
+      closeAllTips(btn);
+      setTip(btn, willOpen);
+    })
+  );
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const open = infoButtons.find((b) => b.getAttribute('aria-expanded') === 'true');
+    if (open) {
+      setTip(open, false);
+      open.focus();
+    }
+  });
+
+  // Tapping anywhere else closes an open explanation
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.info-btn, .info-tip')) closeAllTips(null);
   });
 
   $('#btn-new-plan').addEventListener('click', () => showSetup({ canCancel: Boolean(active) }));

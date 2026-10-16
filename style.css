@@ -251,6 +251,66 @@ main:focus,
   font-size: 0.85rem;
 }
 
+/* ---------- info (?) buttons and explanations ---------- */
+
+.label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.total-card .label-row {
+  justify-content: center;
+}
+.label-row .card-label {
+  margin: 0;
+}
+.info-btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 44px; /* comfortable touch target */
+  height: 44px;
+  margin: -10px -8px -10px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.info-btn span {
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-style: italic;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1;
+}
+.info-btn[aria-expanded="true"] span {
+  box-shadow: 0 0 0 2px currentColor; /* ring shows which explanation is open */
+}
+.info-tip {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--track);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.total-card .info-tip {
+  background: var(--surface);
+}
+
 /* ---------- alerts ---------- */
 
 .alert {

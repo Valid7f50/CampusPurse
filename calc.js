@@ -426,7 +426,7 @@ function canAfford(plan, spendings, purchase, today) {
       result: {
         ...common,
         verdict: 'tight',
-        message: `You can afford it, but it leaves only ${fmt(sim.flexible)} of flexible money. Safe daily spending drops from ${fmt(before.safeDailySpend)} to ${fmt(safeDailyAfter)}.`,
+        message: `You can afford it, but it leaves only ${fmt(sim.flexible)} of flexible money. Flexible spending per day drops from ${fmt(before.safeDailySpend)} to ${fmt(safeDailyAfter)}.`,
       },
     };
   }
@@ -435,7 +435,7 @@ function canAfford(plan, spendings, purchase, today) {
     result: {
       ...common,
       verdict: 'fits',
-      message: `This fits your plan. Safe daily spending goes from ${fmt(before.safeDailySpend)} to ${fmt(safeDailyAfter)}.`,
+      message: `This fits your plan. Flexible spending per day goes from ${fmt(before.safeDailySpend)} to ${fmt(safeDailyAfter)}.`,
     },
   };
 }
